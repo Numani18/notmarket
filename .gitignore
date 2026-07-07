@@ -1,0 +1,6 @@
+.next/
+node_modules/
+notmarket.db
+public/uploads/
+.env.local
+*.pem
