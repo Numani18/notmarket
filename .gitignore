@@ -4,3 +4,4 @@ notmarket.db
 public/uploads/
 .env.local
 *.pem
+tsconfig.tsbuildinfo

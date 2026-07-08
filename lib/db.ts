@@ -19,6 +19,23 @@ function rawClient(): Client {
   return _client
 }
 
+// Geçici ağ hatalarında (DNS/timeout/reset) otomatik tekrar dener
+async function withRetry<T>(fn: () => Promise<T>, retries = 3): Promise<T> {
+  let lastErr: any
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn()
+    } catch (err: any) {
+      lastErr = err
+      const msg = String(err?.message || '') + String(err?.cause?.code || '') + String(err?.code || '')
+      const transient = /fetch failed|ENOTFOUND|ETIMEDOUT|ECONNRESET|ECONNREFUSED|CONNECT_TIMEOUT|EAI_AGAIN|503|network/i.test(msg)
+      if (!transient || i === retries - 1) break
+      await new Promise((r) => setTimeout(r, 400 * (i + 1)))
+    }
+  }
+  throw lastErr
+}
+
 // undefined -> null, boolean -> 0/1 (libSQL undefined/boolean kabul etmez)
 function normArgs(args: any[]): InValue[] {
   return args.map((a) => {
@@ -32,17 +49,17 @@ class Statement {
   constructor(private c: Client, private sql: string) {}
 
   async get(...args: any[]): Promise<any> {
-    const r = await this.c.execute({ sql: this.sql, args: normArgs(args) })
+    const r = await withRetry(() => this.c.execute({ sql: this.sql, args: normArgs(args) }))
     return r.rows[0] ?? undefined
   }
 
   async all(...args: any[]): Promise<any[]> {
-    const r = await this.c.execute({ sql: this.sql, args: normArgs(args) })
+    const r = await withRetry(() => this.c.execute({ sql: this.sql, args: normArgs(args) }))
     return r.rows as any[]
   }
 
   async run(...args: any[]): Promise<{ changes: number; lastInsertRowid: bigint | undefined }> {
-    const r = await this.c.execute({ sql: this.sql, args: normArgs(args) })
+    const r = await withRetry(() => this.c.execute({ sql: this.sql, args: normArgs(args) }))
     return { changes: r.rowsAffected, lastInsertRowid: r.lastInsertRowid }
   }
 }
@@ -62,7 +79,7 @@ export async function getDb(): Promise<Db> {
 }
 
 async function initSchema(db: Client) {
-  await db.executeMultiple(`
+  await withRetry(() => db.executeMultiple(`
     CREATE TABLE IF NOT EXISTS users (
       id          TEXT PRIMARY KEY,
       name        TEXT NOT NULL,
@@ -170,13 +187,13 @@ async function initSchema(db: Client) {
     CREATE INDEX IF NOT EXISTS idx_favorites_user ON favorites(user_id);
     CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
     CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);
-  `)
+  `))
 
   // Admin bootstrap
   const adminEmail = process.env.ADMIN_EMAIL
   if (adminEmail) {
     try {
-      await db.execute({ sql: "UPDATE users SET role = 'admin' WHERE email = ?", args: [adminEmail] })
+      await withRetry(() => db.execute({ sql: "UPDATE users SET role = 'admin' WHERE email = ?", args: [adminEmail] }))
     } catch {}
   }
 }
