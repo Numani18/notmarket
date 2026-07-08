@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
   const school_type = searchParams.get('school_type') || ''
   const sort = searchParams.get('sort') || 'newest'
 
-  const db = getDb()
+  const db = await getDb()
 
   const conditions: string[] = ["n.status = 'active'"]
   const params: any[] = []
@@ -89,6 +89,6 @@ export async function GET(req: NextRequest) {
     ORDER BY ${order}
     LIMIT 100
   `
-  const notes = db.prepare(sql).all(...params)
+  const notes = await db.prepare(sql).all(...params)
   return NextResponse.json({ notes })
 }

@@ -30,12 +30,12 @@ export function getSession(): TokenPayload | null {
 }
 
 // Oturumdaki kullanıcının admin olup olmadığını veritabanından kontrol eder
-export function isAdmin(): boolean {
+export async function isAdmin(): Promise<boolean> {
   const session = getSession()
   if (!session) return false
   try {
-    const db = getDb()
-    const user = db.prepare('SELECT role FROM users WHERE id = ?').get(session.id) as any
+    const db = await getDb()
+    const user = await db.prepare('SELECT role FROM users WHERE id = ?').get(session.id) as any
     return user?.role === 'admin'
   } catch {
     return false

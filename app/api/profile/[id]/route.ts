@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getDb } from '@/lib/db'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const db = getDb()
+  const db = await getDb()
 
-  const user = db.prepare('SELECT id, name, university, department, created_at FROM users WHERE id = ?')
+  const user = await db.prepare('SELECT id, name, university, department, created_at FROM users WHERE id = ?')
     .get(params.id) as any
   if (!user) return NextResponse.json({ error: 'Kullanıcı bulunamadı' }, { status: 404 })
 
-  const notes = db.prepare(`
+  const notes = await db.prepare(`
     SELECT n.*, u.name as seller_name
     FROM notes n JOIN users u ON u.id = n.seller_id
     WHERE n.seller_id = ? AND n.status = 'active'

@@ -10,14 +10,14 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const noteId = searchParams.get('noteId')
 
-  const db = getDb()
+  const db = await getDb()
 
   if (noteId) {
-    const fav = db.prepare('SELECT id FROM favorites WHERE user_id = ? AND note_id = ?').get(session.id, noteId)
+    const fav = await db.prepare('SELECT id FROM favorites WHERE user_id = ? AND note_id = ?').get(session.id, noteId)
     return NextResponse.json({ saved: !!fav })
   }
 
-  const notes = db.prepare(`
+  const notes = await db.prepare(`
     SELECT n.*, u.name as seller_name
     FROM favorites f
     JOIN notes n ON n.id = f.note_id
@@ -36,14 +36,14 @@ export async function POST(req: NextRequest) {
   const { noteId } = await req.json()
   if (!noteId) return NextResponse.json({ error: 'noteId gerekli' }, { status: 400 })
 
-  const db = getDb()
-  const existing = db.prepare('SELECT id FROM favorites WHERE user_id = ? AND note_id = ?').get(session.id, noteId)
+  const db = await getDb()
+  const existing = await db.prepare('SELECT id FROM favorites WHERE user_id = ? AND note_id = ?').get(session.id, noteId)
 
   if (existing) {
-    db.prepare('DELETE FROM favorites WHERE user_id = ? AND note_id = ?').run(session.id, noteId)
+    await db.prepare('DELETE FROM favorites WHERE user_id = ? AND note_id = ?').run(session.id, noteId)
     return NextResponse.json({ saved: false })
   }
 
-  db.prepare('INSERT INTO favorites (id, user_id, note_id) VALUES (?, ?, ?)').run(uuid(), session.id, noteId)
+  await db.prepare('INSERT INTO favorites (id, user_id, note_id) VALUES (?, ?, ?)').run(uuid(), session.id, noteId)
   return NextResponse.json({ saved: true })
 }

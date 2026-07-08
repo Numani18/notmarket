@@ -9,20 +9,20 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const session = getSession()
   if (!session) return NextResponse.json({ error: 'Giriş yapman gerekiyor' }, { status: 401 })
 
-  const db = getDb()
-  const note = db.prepare('SELECT * FROM notes WHERE id = ?').get(params.id) as any
+  const db = await getDb()
+  const note = await db.prepare('SELECT * FROM notes WHERE id = ?').get(params.id) as any
   if (!note) return NextResponse.json({ error: 'Not bulunamadı' }, { status: 404 })
 
   const filePath = path.join(process.cwd(), 'public', note.file_path)
   if (!fs.existsSync(filePath)) return NextResponse.json({ error: 'Dosya bulunamadı' }, { status: 404 })
 
-  db.prepare('UPDATE notes SET downloads = downloads + 1 WHERE id = ?').run(params.id)
+  await db.prepare('UPDATE notes SET downloads = downloads + 1 WHERE id = ?').run(params.id)
 
   // Her 5 indirmede bir not sahibine bildirim (spam olmasın diye)
   if (note.seller_id !== session.id) {
     const newCount = (note.downloads || 0) + 1
     if (newCount === 1 || newCount % 5 === 0) {
-      createNotification(
+      await createNotification(
         note.seller_id,
         'download',
         `"${note.title}" notun ${newCount} kez indirildi 🎉`,

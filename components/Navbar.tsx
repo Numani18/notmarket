@@ -21,7 +21,8 @@ export default function Navbar() {
   useEffect(() => {
     fetch('/api/auth/me')
       .then((r) => (r.ok ? r.json() : null))
-      .then((data) => setUser(data?.user || null))
+      // Geçersiz/eski oturumda ad boş olabilir — o durumda çıkış yapmış say
+      .then((data) => setUser(data?.user?.name ? data.user : null))
       .catch(() => {})
   }, [])
 

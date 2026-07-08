@@ -71,8 +71,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const db = getDb()
-    db.prepare(`
+    const db = await getDb()
+    await db.prepare(`
       INSERT INTO notes (id, seller_id, title, description, university, faculty, department, course, instructor, type, price, file_path, school_type, school_grade)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(

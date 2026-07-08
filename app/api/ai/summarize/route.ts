@@ -14,17 +14,17 @@ export async function GET(req: NextRequest) {
   const noteId = searchParams.get('noteId')
   if (!noteId) return NextResponse.json({ error: 'noteId gerekli' }, { status: 400 })
 
-  const db = getDb()
-  const note = db.prepare('SELECT * FROM notes WHERE id = ?').get(noteId) as any
+  const db = await getDb()
+  const note = await db.prepare('SELECT * FROM notes WHERE id = ?').get(noteId) as any
   if (!note) return NextResponse.json({ error: 'Not bulunamadı' }, { status: 404 })
 
-  const cached = db.prepare('SELECT * FROM ai_summaries WHERE note_id = ?').get(noteId) as any
+  const cached = await db.prepare('SELECT * FROM ai_summaries WHERE note_id = ?').get(noteId) as any
   if (cached) {
     return NextResponse.json({ summary: cached.summary, keyTopics: JSON.parse(cached.key_topics) })
   }
 
   // Cache yoksa yeni üretim — günlük limiti kontrol et
-  const limit = checkAndConsume(session.id, 'summary')
+  const limit = await checkAndConsume(session.id, 'summary')
   if (!limit.ok) {
     return NextResponse.json({ error: `Günlük AI özet limitine ulaştın (${limit.limit}). Yarın tekrar dene.` }, { status: 429 })
   }
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
   try {
     const result = await summarizeNote(text)
     const { v4: uuid } = await import('uuid')
-    db.prepare('INSERT INTO ai_summaries (id, note_id, summary, key_topics) VALUES (?, ?, ?, ?)')
+    await db.prepare('INSERT INTO ai_summaries (id, note_id, summary, key_topics) VALUES (?, ?, ?, ?)')
       .run(uuid(), noteId, result.summary, JSON.stringify(result.keyTopics))
     return NextResponse.json(result)
   } catch (err: any) {

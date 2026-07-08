@@ -6,8 +6,8 @@ export async function GET() {
   const session = getSession()
   if (!session) return NextResponse.json({ user: null })
 
-  const db = getDb()
-  const user = db
+  const db = await getDb()
+  const user = await db
     .prepare('SELECT id, name, email, university, department, balance, role FROM users WHERE id = ?')
     .get(session.id) as any
 
@@ -21,16 +21,16 @@ export async function PATCH(req: NextRequest) {
 
   const body = await req.json()
   const { university, department } = body
-  const db = getDb()
+  const db = await getDb()
 
   // Ad da gönderildiyse güncelle (boş olamaz)
   if (typeof body.name === 'string') {
     const name = body.name.trim()
     if (name.length < 2) return NextResponse.json({ error: 'Ad en az 2 karakter olmalı' }, { status: 400 })
-    db.prepare('UPDATE users SET name = ?, university = ?, department = ? WHERE id = ?')
+    await db.prepare('UPDATE users SET name = ?, university = ?, department = ? WHERE id = ?')
       .run(name, university || null, department || null, session.id)
   } else {
-    db.prepare('UPDATE users SET university = ?, department = ? WHERE id = ?')
+    await db.prepare('UPDATE users SET university = ?, department = ? WHERE id = ?')
       .run(university || null, department || null, session.id)
   }
 

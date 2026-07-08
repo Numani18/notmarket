@@ -16,15 +16,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Şifre en az 6 karakter olmalı' }, { status: 400 })
     }
 
-    const db = getDb()
-    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email)
+    const db = await getDb()
+    const existing = await db.prepare('SELECT id FROM users WHERE email = ?').get(email)
     if (existing) {
       return NextResponse.json({ error: 'Bu e-posta zaten kayıtlı' }, { status: 409 })
     }
 
     const id = uuid()
     const hash = await bcrypt.hash(password, 10)
-    db.prepare(
+    await db.prepare(
       'INSERT INTO users (id, name, email, password, university, department) VALUES (?, ?, ?, ?, ?, ?)'
     ).run(id, name, email, hash, university || null, department || null)
 

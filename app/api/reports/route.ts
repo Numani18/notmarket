@@ -15,25 +15,25 @@ export async function POST(req: NextRequest) {
   if (!noteId || !reason) return NextResponse.json({ error: 'noteId ve sebep gerekli' }, { status: 400 })
   if (!REASONS.includes(reason)) return NextResponse.json({ error: 'Geçersiz sebep' }, { status: 400 })
 
-  const db = getDb()
-  const note = db.prepare('SELECT id, title, report_count FROM notes WHERE id = ?').get(noteId) as any
+  const db = await getDb()
+  const note = await db.prepare('SELECT id, title, report_count FROM notes WHERE id = ?').get(noteId) as any
   if (!note) return NextResponse.json({ error: 'Not bulunamadı' }, { status: 404 })
 
-  const existing = db.prepare('SELECT id FROM reports WHERE note_id = ? AND user_id = ?').get(noteId, session.id)
+  const existing = await db.prepare('SELECT id FROM reports WHERE note_id = ? AND user_id = ?').get(noteId, session.id)
   if (existing) return NextResponse.json({ error: 'Bu notu zaten şikayet ettin' }, { status: 409 })
 
-  db.prepare('INSERT INTO reports (id, note_id, user_id, reason, detail) VALUES (?, ?, ?, ?, ?)')
+  await db.prepare('INSERT INTO reports (id, note_id, user_id, reason, detail) VALUES (?, ?, ?, ?, ?)')
     .run(uuid(), noteId, session.id, reason, detail || null)
 
   const newCount = (note.report_count || 0) + 1
-  db.prepare('UPDATE notes SET report_count = ? WHERE id = ?').run(newCount, noteId)
+  await db.prepare('UPDATE notes SET report_count = ? WHERE id = ?').run(newCount, noteId)
 
   // Eşiği geçince otomatik gizle
   if (newCount >= AUTO_HIDE_THRESHOLD) {
-    db.prepare("UPDATE notes SET status = 'hidden' WHERE id = ?").run(noteId)
+    await db.prepare("UPDATE notes SET status = 'hidden' WHERE id = ?").run(noteId)
   }
 
-  notifyAdmins('report', `"${note.title}" notu şikayet edildi (${newCount} şikayet)`, '/admin')
+  await notifyAdmins('report', `"${note.title}" notu şikayet edildi (${newCount} şikayet)`, '/admin')
 
   return NextResponse.json({ success: true })
 }

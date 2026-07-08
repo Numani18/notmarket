@@ -8,8 +8,8 @@ export const dynamic = 'force-dynamic'
 
 async function getFeaturedData() {
   try {
-    const db = getDb()
-    const notes = db.prepare(`
+    const db = await getDb()
+    const notes = await db.prepare(`
       SELECT n.*, u.name as seller_name
       FROM notes n
       JOIN users u ON u.id = n.seller_id
@@ -18,7 +18,7 @@ async function getFeaturedData() {
       LIMIT 6
     `).all() as any[]
 
-    const stats = db.prepare(`
+    const stats = await db.prepare(`
       SELECT
         (SELECT COUNT(*) FROM users) as user_count,
         (SELECT COUNT(*) FROM notes WHERE status = 'active') as note_count,

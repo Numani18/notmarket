@@ -12,8 +12,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'E-posta ve şifre zorunludur' }, { status: 400 })
     }
 
-    const db = getDb()
-    const user = db
+    const db = await getDb()
+    const user = await db
       .prepare('SELECT id, name, email, password FROM users WHERE email = ?')
       .get(email) as any
 

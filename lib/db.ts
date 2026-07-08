@@ -1,23 +1,68 @@
-// Node.js 22+ built-in SQLite (no native compilation needed)
-import { DatabaseSync } from 'node:sqlite'
-import path from 'path'
+// Turso (libSQL) — kalıcı bulut veritabanı.
+// Eski node:sqlite senkron API'sine benzer bir async sarmalayıcı sunar:
+//   const db = await getDb()
+//   await db.prepare(sql).get(...args)
+//   await db.prepare(sql).all(...args)
+//   await db.prepare(sql).run(...args)
+import { createClient, type Client, type InValue } from '@libsql/client'
 
-const DB_PATH = path.join(process.cwd(), 'notmarket.db')
+let _client: Client | null = null
+let _initPromise: Promise<void> | null = null
 
-let _db: DatabaseSync | null = null
-
-export function getDb(): DatabaseSync {
-  if (!_db) {
-    _db = new DatabaseSync(DB_PATH)
-    _db.exec('PRAGMA journal_mode = WAL')
-    _db.exec('PRAGMA foreign_keys = ON')
-    initSchema(_db)
+function rawClient(): Client {
+  if (!_client) {
+    const url = process.env.TURSO_DATABASE_URL
+    const authToken = process.env.TURSO_AUTH_TOKEN
+    if (!url) throw new Error('TURSO_DATABASE_URL tanımlı değil')
+    _client = createClient({ url, authToken })
   }
-  return _db
+  return _client
 }
 
-function initSchema(db: DatabaseSync) {
-  db.exec(`
+// undefined -> null, boolean -> 0/1 (libSQL undefined/boolean kabul etmez)
+function normArgs(args: any[]): InValue[] {
+  return args.map((a) => {
+    if (a === undefined) return null
+    if (typeof a === 'boolean') return a ? 1 : 0
+    return a as InValue
+  })
+}
+
+class Statement {
+  constructor(private c: Client, private sql: string) {}
+
+  async get(...args: any[]): Promise<any> {
+    const r = await this.c.execute({ sql: this.sql, args: normArgs(args) })
+    return r.rows[0] ?? undefined
+  }
+
+  async all(...args: any[]): Promise<any[]> {
+    const r = await this.c.execute({ sql: this.sql, args: normArgs(args) })
+    return r.rows as any[]
+  }
+
+  async run(...args: any[]): Promise<{ changes: number; lastInsertRowid: bigint | undefined }> {
+    const r = await this.c.execute({ sql: this.sql, args: normArgs(args) })
+    return { changes: r.rowsAffected, lastInsertRowid: r.lastInsertRowid }
+  }
+}
+
+class Db {
+  constructor(private c: Client) {}
+  prepare(sql: string): Statement {
+    return new Statement(this.c, sql)
+  }
+}
+
+export async function getDb(): Promise<Db> {
+  const c = rawClient()
+  if (!_initPromise) _initPromise = initSchema(c)
+  await _initPromise
+  return new Db(c)
+}
+
+async function initSchema(db: Client) {
+  await db.executeMultiple(`
     CREATE TABLE IF NOT EXISTS users (
       id          TEXT PRIMARY KEY,
       name        TEXT NOT NULL,
@@ -26,12 +71,13 @@ function initSchema(db: DatabaseSync) {
       university  TEXT,
       department  TEXT,
       balance     REAL NOT NULL DEFAULT 0,
+      role        TEXT NOT NULL DEFAULT 'user',
       created_at  TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
     CREATE TABLE IF NOT EXISTS notes (
       id            TEXT PRIMARY KEY,
-      seller_id     TEXT NOT NULL REFERENCES users(id),
+      seller_id     TEXT NOT NULL,
       title         TEXT NOT NULL,
       description   TEXT,
       university    TEXT NOT NULL,
@@ -48,24 +94,17 @@ function initSchema(db: DatabaseSync) {
       rating        REAL,
       rating_count  INTEGER NOT NULL DEFAULT 0,
       status        TEXT NOT NULL DEFAULT 'active',
+      school_type   TEXT NOT NULL DEFAULT 'universite',
+      school_grade  TEXT,
+      report_count  INTEGER NOT NULL DEFAULT 0,
       created_at    TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-
-    CREATE TABLE IF NOT EXISTS purchases (
-      id          TEXT PRIMARY KEY,
-      buyer_id    TEXT NOT NULL REFERENCES users(id),
-      note_id     TEXT NOT NULL REFERENCES notes(id),
-      amount      REAL NOT NULL,
-      platform_fee REAL NOT NULL,
-      created_at  TEXT NOT NULL DEFAULT (datetime('now')),
-      UNIQUE(buyer_id, note_id)
     );
 
     CREATE TABLE IF NOT EXISTS reviews (
       id         TEXT PRIMARY KEY,
-      note_id    TEXT NOT NULL REFERENCES notes(id),
-      user_id    TEXT NOT NULL REFERENCES users(id),
-      rating     INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+      note_id    TEXT NOT NULL,
+      user_id    TEXT NOT NULL,
+      rating     INTEGER NOT NULL,
       comment    TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE(note_id, user_id)
@@ -73,7 +112,7 @@ function initSchema(db: DatabaseSync) {
 
     CREATE TABLE IF NOT EXISTS ai_summaries (
       id         TEXT PRIMARY KEY,
-      note_id    TEXT NOT NULL REFERENCES notes(id),
+      note_id    TEXT NOT NULL,
       summary    TEXT NOT NULL,
       key_topics TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -81,16 +120,16 @@ function initSchema(db: DatabaseSync) {
 
     CREATE TABLE IF NOT EXISTS favorites (
       id         TEXT PRIMARY KEY,
-      user_id    TEXT NOT NULL REFERENCES users(id),
-      note_id    TEXT NOT NULL REFERENCES notes(id),
+      user_id    TEXT NOT NULL,
+      note_id    TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE(user_id, note_id)
     );
 
     CREATE TABLE IF NOT EXISTS reports (
       id         TEXT PRIMARY KEY,
-      note_id    TEXT NOT NULL REFERENCES notes(id),
-      user_id    TEXT NOT NULL REFERENCES users(id),
+      note_id    TEXT NOT NULL,
+      user_id    TEXT NOT NULL,
       reason     TEXT NOT NULL,
       detail     TEXT,
       status     TEXT NOT NULL DEFAULT 'open',
@@ -100,7 +139,7 @@ function initSchema(db: DatabaseSync) {
 
     CREATE TABLE IF NOT EXISTS notifications (
       id         TEXT PRIMARY KEY,
-      user_id    TEXT NOT NULL REFERENCES users(id),
+      user_id    TEXT NOT NULL,
       type       TEXT NOT NULL,
       message    TEXT NOT NULL,
       link       TEXT,
@@ -110,7 +149,7 @@ function initSchema(db: DatabaseSync) {
 
     CREATE TABLE IF NOT EXISTS ai_usage (
       id         TEXT PRIMARY KEY,
-      user_id    TEXT NOT NULL REFERENCES users(id),
+      user_id    TEXT NOT NULL,
       day        TEXT NOT NULL,
       kind       TEXT NOT NULL,
       count      INTEGER NOT NULL DEFAULT 0,
@@ -119,7 +158,7 @@ function initSchema(db: DatabaseSync) {
 
     CREATE TABLE IF NOT EXISTS ai_quizzes (
       id         TEXT PRIMARY KEY,
-      note_id    TEXT NOT NULL REFERENCES notes(id),
+      note_id    TEXT NOT NULL,
       questions  TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE(note_id)
@@ -128,22 +167,16 @@ function initSchema(db: DatabaseSync) {
     CREATE INDEX IF NOT EXISTS idx_notes_university ON notes(university);
     CREATE INDEX IF NOT EXISTS idx_notes_department ON notes(department);
     CREATE INDEX IF NOT EXISTS idx_notes_course ON notes(course);
-    CREATE INDEX IF NOT EXISTS idx_purchases_buyer ON purchases(buyer_id);
-    CREATE INDEX IF NOT EXISTS idx_purchases_note ON purchases(note_id);
     CREATE INDEX IF NOT EXISTS idx_favorites_user ON favorites(user_id);
     CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
     CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);
   `)
 
-  // Migrations for existing databases
-  try { db.exec("ALTER TABLE notes ADD COLUMN school_type TEXT NOT NULL DEFAULT 'universite'") } catch {}
-  try { db.exec("ALTER TABLE notes ADD COLUMN school_grade TEXT") } catch {}
-  try { db.exec("ALTER TABLE notes ADD COLUMN report_count INTEGER NOT NULL DEFAULT 0") } catch {}
-  try { db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'") } catch {}
-
-  // Bootstrap admin: first registered user OR the configured admin email
+  // Admin bootstrap
   const adminEmail = process.env.ADMIN_EMAIL
   if (adminEmail) {
-    try { db.prepare("UPDATE users SET role = 'admin' WHERE email = ?").run(adminEmail) } catch {}
+    try {
+      await db.execute({ sql: "UPDATE users SET role = 'admin' WHERE email = ?", args: [adminEmail] })
+    } catch {}
   }
 }
