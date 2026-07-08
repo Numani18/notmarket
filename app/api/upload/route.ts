@@ -49,6 +49,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Başlık, okul, sınıf/bölüm ve ders adı zorunludur' }, { status: 400 })
   }
 
+  // Telif onayı zorunlu
+  if (get('own_work') !== 'true') {
+    return NextResponse.json({ error: 'Bu içeriğin sana ait olduğunu onaylaman gerekiyor' }, { status: 400 })
+  }
+
   const price = 0
 
   const uploadDir = path.join(process.cwd(), 'public', 'uploads')

@@ -1,7 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-    serverComponentsExternalPackages: [],
+    // pdf-parse (pdfjs-dist) webpack ile paketlenince bozuluyor;
+    // Node modülü olarak dışarıda bırakılınca düzgün çalışıyor
+    serverComponentsExternalPackages: ['pdf-parse'],
   },
 }
 

@@ -1,41 +1,60 @@
-import Anthropic from '@anthropic-ai/sdk'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-})
+// Google Gemini (ücretsiz) — Claude yerine kullanılıyor.
+// Fonksiyon isimleri aynı kaldığı için route'lar değişmedi.
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+const MODEL = 'gemini-2.5-flash'
+
+// Geçici ağ hatalarında (fetch failed vb.) otomatik tekrar dener
+async function withRetry<T>(fn: () => Promise<T>, retries = 3): Promise<T> {
+  let lastErr: any
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn()
+    } catch (err: any) {
+      lastErr = err
+      const msg = String(err?.message || '')
+      // Sadece geçici hatalarda tekrar dene
+      const transient = msg.includes('fetch failed') || msg.includes('503') || msg.includes('overloaded') || msg.includes('ECONNRESET')
+      if (!transient || i === retries - 1) break
+      await new Promise(r => setTimeout(r, 800 * (i + 1)))
+    }
+  }
+  throw lastErr
+}
+
+function extractJson(text: string): string {
+  // Markdown kod bloğu varsa temizle
+  const cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim()
+  return cleaned
+}
 
 export async function summarizeNote(text: string): Promise<{
   summary: string
   keyTopics: string[]
   likelySyllabus: string[]
 }> {
-  const msg = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 2048,
-    system: `Sen bir Türk üniversite öğrencisine yardımcı olan akademik asistansın.
-Ders notlarını analiz ederek öğrencilere faydalı özetler çıkarırsın.
-Her zaman Türkçe yanıt verirsin. JSON formatında yanıt verirsin.`,
-    messages: [
-      {
-        role: 'user',
-        content: `Aşağıdaki ders notunu analiz et ve şu formatta JSON döndür:
+  const model = genAI.getGenerativeModel({
+    model: MODEL,
+    systemInstruction: `Sen bir Türk öğrencisine yardımcı olan akademik asistansın.
+Ders notlarını analiz ederek faydalı özetler çıkarırsın. Her zaman Türkçe yanıt verirsin.
+SADECE geçerli JSON döndür, başka açıklama ekleme.`,
+  })
+
+  const prompt = `Aşağıdaki ders notunu analiz et ve şu formatta JSON döndür:
 {
   "summary": "notun kapsamlı özeti (3-5 paragraf)",
-  "keyTopics": ["konu1", "konu2", ...],
-  "likelySyllabus": ["sınavda çıkabilecek konu1", ...]
+  "keyTopics": ["konu1", "konu2"],
+  "likelySyllabus": ["sınavda çıkabilecek konu1", "konu2"]
 }
 
 DERS NOTU:
-${text.slice(0, 8000)}`,
-      },
-    ],
-  })
+${text.slice(0, 8000)}`
 
-  const content = msg.content[0]
-  if (content.type !== 'text') throw new Error('Unexpected response type')
-
-  const jsonMatch = content.text.match(/\{[\s\S]*\}/)
-  if (!jsonMatch) throw new Error('No JSON in response')
+  const result = await withRetry(() => model.generateContent(prompt))
+  const raw = extractJson(result.response.text())
+  const jsonMatch = raw.match(/\{[\s\S]*\}/)
+  if (!jsonMatch) throw new Error('AI yanıtı okunamadı')
 
   const parsed = JSON.parse(jsonMatch[0])
   return {
@@ -53,17 +72,15 @@ export async function generateQuiz(text: string): Promise<
     explanation: string
   }>
 > {
-  const msg = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 3000,
-    system: `Sen bir Türk üniversite öğrencisine yardımcı olan akademik asistansın.
-Ders notlarına göre çoktan seçmeli quiz soruları üretirsin.
-Her zaman Türkçe yanıt verirsin. JSON formatında yanıt verirsin.`,
-    messages: [
-      {
-        role: 'user',
-        content: `Aşağıdaki ders notuna göre 10 adet çoktan seçmeli soru üret.
-Şu formatta JSON döndür:
+  const model = genAI.getGenerativeModel({
+    model: MODEL,
+    systemInstruction: `Sen bir Türk öğrencisine yardımcı olan akademik asistansın.
+Ders notlarına göre çoktan seçmeli quiz soruları üretirsin. Her zaman Türkçe yanıt verirsin.
+SADECE geçerli JSON dizisi döndür, başka açıklama ekleme.`,
+  })
+
+  const prompt = `Aşağıdaki ders notuna göre 10 adet çoktan seçmeli soru üret.
+Şu formatta JSON dizisi döndür:
 [
   {
     "question": "Soru metni?",
@@ -75,16 +92,12 @@ Her zaman Türkçe yanıt verirsin. JSON formatında yanıt verirsin.`,
 correct alanı 0-3 arası index (A=0, B=1, C=2, D=3).
 
 DERS NOTU:
-${text.slice(0, 6000)}`,
-      },
-    ],
-  })
+${text.slice(0, 6000)}`
 
-  const content = msg.content[0]
-  if (content.type !== 'text') throw new Error('Unexpected response type')
-
-  const jsonMatch = content.text.match(/\[[\s\S]*\]/)
-  if (!jsonMatch) throw new Error('No JSON array in response')
+  const result = await withRetry(() => model.generateContent(prompt))
+  const raw = extractJson(result.response.text())
+  const jsonMatch = raw.match(/\[[\s\S]*\]/)
+  if (!jsonMatch) throw new Error('AI yanıtı okunamadı')
 
   return JSON.parse(jsonMatch[0])
 }
@@ -94,25 +107,29 @@ export async function chatWithNote(
   messages: Array<{ role: 'user' | 'assistant'; content: string }>,
   question: string
 ): Promise<string> {
-  const allMessages = [
-    ...messages.slice(-6),
-    { role: 'user' as const, content: question },
-  ]
+  const model = genAI.getGenerativeModel({
+    model: MODEL,
+    systemInstruction: `Sen bir Türk öğrencisine bu ders notu üzerinden yardımcı olan samimi bir çalışma asistanısın.
 
-  const msg = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 1024,
-    system: `Sen bir Türk üniversite öğrencisine ders notuna göre yardımcı olan kişisel asistansın.
-SADECE aşağıdaki ders notundaki bilgileri kullanarak sorulara cevap ver.
-Notlarda bulunmayan konular için "Bu konu notlarda bulunmuyor" de.
-Her zaman Türkçe yanıt ver. Kısa ve öz ol.
+Görevin:
+- Notun içeriğiyle ilgili soruları notu temel alarak açıkla.
+- Öğrenci "nasıl çalışmalıyım", "hangi konulara odaklanmalıyım", "bunu bana anlat" gibi sorular sorarsa; notun içeriğine dayanarak çalışma tavsiyesi ve açıklama ver.
+- Konuyu daha iyi anlatmak için genel bilgini de kullanabilirsin, ama odağın hep bu not olsun.
+- Sadece notla tamamen alakasız (örn. hava durumu) sorularda kibarca konuya dönmesini iste.
+
+Her zaman Türkçe, anlaşılır ve yardımsever yanıt ver.
 
 DERS NOTU:
 ${noteText.slice(0, 6000)}`,
-    messages: allMessages,
   })
 
-  const content = msg.content[0]
-  if (content.type !== 'text') throw new Error('Unexpected response type')
-  return content.text
+  // Önceki mesajları Gemini formatına çevir (son 6 mesaj)
+  const history = messages.slice(-6).map((m) => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }],
+  }))
+
+  const chat = model.startChat({ history })
+  const result = await withRetry(() => chat.sendMessage(question))
+  return result.response.text()
 }

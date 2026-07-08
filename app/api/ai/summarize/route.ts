@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { getDb } from '@/lib/db'
 import { summarizeNote } from '@/lib/claude'
-import fs from 'fs'
+import { checkAndConsume } from '@/lib/ai-limit'
+import { extractPdfText } from '@/lib/pdf'
 import path from 'path'
 
 export async function GET(req: NextRequest) {
@@ -22,10 +23,20 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ summary: cached.summary, keyTopics: JSON.parse(cached.key_topics) })
   }
 
-  const filePath = path.join(process.cwd(), 'public', note.file_path)
-  if (!fs.existsSync(filePath)) return NextResponse.json({ error: 'Dosya bulunamadı' }, { status: 404 })
+  // Cache yoksa yeni üretim — günlük limiti kontrol et
+  const limit = checkAndConsume(session.id, 'summary')
+  if (!limit.ok) {
+    return NextResponse.json({ error: `Günlük AI özet limitine ulaştın (${limit.limit}). Yarın tekrar dene.` }, { status: 429 })
+  }
 
-  const text = fs.readFileSync(filePath).toString('utf8').slice(0, 10000)
+  const filePath = path.join(process.cwd(), 'public', note.file_path)
+
+  let text: string
+  try {
+    text = await extractPdfText(filePath, 10000)
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 422 })
+  }
 
   try {
     const result = await summarizeNote(text)

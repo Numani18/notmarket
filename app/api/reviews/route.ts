@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { getDb } from '@/lib/db'
+import { createNotification } from '@/lib/notify'
 import { v4 as uuid } from 'uuid'
 
 // GET /api/reviews?noteId=xxx — notun yorumlarını getir
@@ -33,16 +34,12 @@ export async function POST(req: NextRequest) {
 
   const db = getDb()
 
-  // Satın almış mı kontrol et
-  const note = db.prepare('SELECT seller_id FROM notes WHERE id = ?').get(noteId) as any
+  const note = db.prepare('SELECT seller_id, title FROM notes WHERE id = ?').get(noteId) as any
   if (!note) return NextResponse.json({ error: 'Not bulunamadı' }, { status: 404 })
 
-  const hasPurchase = db.prepare(
-    'SELECT id FROM purchases WHERE buyer_id = ? AND note_id = ?'
-  ).get(session.id, noteId)
-
-  if (note.seller_id !== session.id && !hasPurchase) {
-    return NextResponse.json({ error: 'Yorum yapabilmek için notu satın alman gerekiyor' }, { status: 403 })
+  // Kendi notuna yorum yapamaz
+  if (note.seller_id === session.id) {
+    return NextResponse.json({ error: 'Kendi notuna yorum yapamazsın' }, { status: 403 })
   }
 
   // Daha önce yorum yapmış mı?
@@ -74,6 +71,17 @@ export async function POST(req: NextRequest) {
     stats.cnt,
     noteId
   )
+
+  // Yeni yorumda not sahibine bildirim gönder
+  if (!existing) {
+    const reviewer = db.prepare('SELECT name FROM users WHERE id = ?').get(session.id) as any
+    createNotification(
+      note.seller_id,
+      'review',
+      `${reviewer?.name || 'Bir kullanıcı'} "${note.title}" notuna ${rating}★ verdi`,
+      `/note/${noteId}`
+    )
+  }
 
   return NextResponse.json({ success: true })
 }

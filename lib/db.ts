@@ -87,15 +87,63 @@ function initSchema(db: DatabaseSync) {
       UNIQUE(user_id, note_id)
     );
 
+    CREATE TABLE IF NOT EXISTS reports (
+      id         TEXT PRIMARY KEY,
+      note_id    TEXT NOT NULL REFERENCES notes(id),
+      user_id    TEXT NOT NULL REFERENCES users(id),
+      reason     TEXT NOT NULL,
+      detail     TEXT,
+      status     TEXT NOT NULL DEFAULT 'open',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(note_id, user_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS notifications (
+      id         TEXT PRIMARY KEY,
+      user_id    TEXT NOT NULL REFERENCES users(id),
+      type       TEXT NOT NULL,
+      message    TEXT NOT NULL,
+      link       TEXT,
+      is_read    INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS ai_usage (
+      id         TEXT PRIMARY KEY,
+      user_id    TEXT NOT NULL REFERENCES users(id),
+      day        TEXT NOT NULL,
+      kind       TEXT NOT NULL,
+      count      INTEGER NOT NULL DEFAULT 0,
+      UNIQUE(user_id, day, kind)
+    );
+
+    CREATE TABLE IF NOT EXISTS ai_quizzes (
+      id         TEXT PRIMARY KEY,
+      note_id    TEXT NOT NULL REFERENCES notes(id),
+      questions  TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(note_id)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_notes_university ON notes(university);
     CREATE INDEX IF NOT EXISTS idx_notes_department ON notes(department);
     CREATE INDEX IF NOT EXISTS idx_notes_course ON notes(course);
     CREATE INDEX IF NOT EXISTS idx_purchases_buyer ON purchases(buyer_id);
     CREATE INDEX IF NOT EXISTS idx_purchases_note ON purchases(note_id);
     CREATE INDEX IF NOT EXISTS idx_favorites_user ON favorites(user_id);
+    CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+    CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);
   `)
 
   // Migrations for existing databases
   try { db.exec("ALTER TABLE notes ADD COLUMN school_type TEXT NOT NULL DEFAULT 'universite'") } catch {}
   try { db.exec("ALTER TABLE notes ADD COLUMN school_grade TEXT") } catch {}
+  try { db.exec("ALTER TABLE notes ADD COLUMN report_count INTEGER NOT NULL DEFAULT 0") } catch {}
+  try { db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'") } catch {}
+
+  // Bootstrap admin: first registered user OR the configured admin email
+  const adminEmail = process.env.ADMIN_EMAIL
+  if (adminEmail) {
+    try { db.prepare("UPDATE users SET role = 'admin' WHERE email = ?").run(adminEmail) } catch {}
+  }
 }

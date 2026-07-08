@@ -3,6 +3,9 @@ import Navbar from '@/components/Navbar'
 import { getDb } from '@/lib/db'
 import NoteCard from '@/components/NoteCard'
 
+// Her ziyarette güncel sayıları göstermek için dinamik render
+export const dynamic = 'force-dynamic'
+
 async function getFeaturedData() {
   try {
     const db = getDb()
@@ -29,14 +32,7 @@ async function getFeaturedData() {
 }
 
 export default async function Home() {
-  const { notes, stats } = await getFeaturedData()
-
-  const displayStats = [
-    { value: stats.user_count > 0 ? `${stats.user_count}+` : '1,200+', label: 'Öğrenci' },
-    { value: stats.note_count > 0 ? `${stats.note_count}+` : '4,800+', label: 'Paylaşılan Not' },
-    { value: stats.school_count > 0 ? `${stats.school_count}+` : '120+', label: 'Okul' },
-    { value: '100%', label: 'Ücretsiz' },
-  ]
+  const { notes } = await getFeaturedData()
 
   return (
     <>
@@ -68,15 +64,19 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* Stats */}
-        <section className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 py-8">
-          <div className="max-w-5xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            {displayStats.map(s => (
-              <div key={s.label}>
-                <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{s.value}</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{s.label}</p>
-              </div>
-            ))}
+        {/* Free banner */}
+        <section className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 py-12">
+          <div className="max-w-3xl mx-auto px-4 text-center">
+            <span className="inline-flex items-center gap-1.5 bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-300 px-4 py-1.5 rounded-full font-semibold text-sm mb-4">
+              ✓ Gizli ücret yok
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-snug">
+              Tüm notlar, AI özet, quiz ve asistan{' '}
+              <span className="text-blue-600 dark:text-blue-400">%100 ücretsiz</span>
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400 mt-3 text-lg">
+              Kredi kartı yok, abonelik yok, gizli ücret yok. Sadece kaydol ve kullan.
+            </p>
           </div>
         </section>
 

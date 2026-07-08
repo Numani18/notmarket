@@ -4,24 +4,6 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
-const UNIVERSITIES = [
-  'İstanbul Teknik Üniversitesi',
-  'Boğaziçi Üniversitesi',
-  'Orta Doğu Teknik Üniversitesi',
-  'Hacettepe Üniversitesi',
-  'Ankara Üniversitesi',
-  'İstanbul Üniversitesi',
-  'Ege Üniversitesi',
-  'Dokuz Eylül Üniversitesi',
-  'Koç Üniversitesi',
-  'Sabancı Üniversitesi',
-  'Bilkent Üniversitesi',
-  'Marmara Üniversitesi',
-  'Yıldız Teknik Üniversitesi',
-  'Gazi Üniversitesi',
-  'Diğer',
-]
-
 export default function RegisterPage() {
   const router = useRouter()
   const [form, setForm] = useState({
@@ -53,7 +35,7 @@ export default function RegisterPage() {
         setError(data.error || 'Kayıt başarısız')
         return
       }
-      router.push('/dashboard')
+      router.push('/onboarding')
       router.refresh()
     } catch {
       setError('Bir hata oluştu')
@@ -114,33 +96,6 @@ export default function RegisterPage() {
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Üniversite <span className="text-gray-400 font-normal">(opsiyonel)</span>
-              </label>
-              <select
-                className="input"
-                value={form.university}
-                onChange={(e) => setForm({ ...form, university: e.target.value })}
-              >
-                <option value="">Seç...</option>
-                {UNIVERSITIES.map((u) => (
-                  <option key={u} value={u}>{u}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Bölüm <span className="text-gray-400 font-normal">(opsiyonel)</span>
-              </label>
-              <input
-                type="text"
-                className="input"
-                placeholder="Bilgisayar Mühendisliği"
-                value={form.department}
-                onChange={(e) => setForm({ ...form, department: e.target.value })}
               />
             </div>
             <button type="submit" className="btn-primary w-full justify-center" disabled={loading}>

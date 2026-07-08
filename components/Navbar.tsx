@@ -4,11 +4,13 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import ThemeToggle from './ThemeToggle'
+import NotificationBell from './NotificationBell'
 
 interface User {
   id: string
   name: string
   email: string
+  role?: string
 }
 
 export default function Navbar() {
@@ -50,23 +52,29 @@ export default function Navbar() {
                 <Link href="/upload" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium">
                   Not Paylaş
                 </Link>
-                <Link href="/dashboard" className="text-gray-600 hover:text-gray-900 font-medium">
+                <Link href="/dashboard" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium">
                   Hesabım
                 </Link>
+                {user.role === 'admin' && (
+                  <Link href="/admin" className="text-red-600 dark:text-red-400 hover:underline font-medium">
+                    Admin
+                  </Link>
+                )}
               </>
             )}
           </div>
 
           <div className="flex items-center gap-3">
+            {user && <NotificationBell />}
             <ThemeToggle />
             {user ? (
               <div className="relative">
                 <button
                   onClick={() => setMenuOpen(!menuOpen)}
-                  className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                  className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white"
                 >
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-blue-600 font-semibold text-sm">
+                  <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/40 rounded-full flex items-center justify-center">
+                    <span className="text-blue-600 dark:text-blue-300 font-semibold text-sm">
                       {user.name.charAt(0).toUpperCase()}
                     </span>
                   </div>
@@ -74,25 +82,31 @@ export default function Navbar() {
                 </button>
                 {menuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-1">
-                    <Link
-                      href="/dashboard"
+                    <Link href={`/profil/${user.id}`}
                       className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
-                      onClick={() => setMenuOpen(false)}
-                    >
+                      onClick={() => setMenuOpen(false)}>
+                      Profilim
+                    </Link>
+                    <Link href="/dashboard"
+                      className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+                      onClick={() => setMenuOpen(false)}>
                       Hesabım
                     </Link>
-                    <Link
-                      href="/upload"
+                    <Link href="/upload"
                       className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
-                      onClick={() => setMenuOpen(false)}
-                    >
+                      onClick={() => setMenuOpen(false)}>
                       Not Yükle
                     </Link>
-                    <hr className="my-1" />
-                    <button
-                      onClick={logout}
-                      className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                    >
+                    {user.role === 'admin' && (
+                      <Link href="/admin"
+                        className="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+                        onClick={() => setMenuOpen(false)}>
+                        Admin Paneli
+                      </Link>
+                    )}
+                    <hr className="my-1 border-gray-200 dark:border-gray-700" />
+                    <button onClick={logout}
+                      className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30">
                       Çıkış Yap
                     </button>
                   </div>

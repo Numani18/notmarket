@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDb } from '@/lib/db'
 import { getSession } from '@/lib/auth'
+import { createNotification } from '@/lib/notify'
 import fs from 'fs'
 import path from 'path'
 
@@ -16,6 +17,19 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   if (!fs.existsSync(filePath)) return NextResponse.json({ error: 'Dosya bulunamadı' }, { status: 404 })
 
   db.prepare('UPDATE notes SET downloads = downloads + 1 WHERE id = ?').run(params.id)
+
+  // Her 5 indirmede bir not sahibine bildirim (spam olmasın diye)
+  if (note.seller_id !== session.id) {
+    const newCount = (note.downloads || 0) + 1
+    if (newCount === 1 || newCount % 5 === 0) {
+      createNotification(
+        note.seller_id,
+        'download',
+        `"${note.title}" notun ${newCount} kez indirildi 🎉`,
+        `/note/${params.id}`
+      )
+    }
+  }
 
   const fileBuffer = fs.readFileSync(filePath)
   return new NextResponse(fileBuffer, {

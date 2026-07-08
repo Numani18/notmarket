@@ -66,6 +66,12 @@ export default function NotePage() {
   const [session, setSession] = useState<any>(null)
   const [saved, setSaved] = useState(false)
   const [similarNotes, setSimilarNotes] = useState<any[]>([])
+  const [reportOpen, setReportOpen] = useState(false)
+  const [reportReason, setReportReason] = useState('')
+  const [reportDetail, setReportDetail] = useState('')
+  const [reportDone, setReportDone] = useState(false)
+  const [reportError, setReportError] = useState('')
+  const [aiError, setAiError] = useState('')
 
   useEffect(() => {
     fetch(`/api/notes/${id}`).then(r => r.json()).then(d => {
@@ -96,18 +102,37 @@ export default function NotePage() {
 
   async function loadSummary() {
     setSummaryLoading(true)
+    setAiError('')
     const res = await fetch(`/api/ai/summarize?noteId=${id}`)
-    setSummary(await res.json())
+    const data = await res.json()
+    if (!res.ok) { setAiError(data.error || 'AI hatası'); setSummaryLoading(false); return }
+    setSummary(data)
     setSummaryLoading(false)
   }
 
-  async function loadQuiz() {
+  async function loadQuiz(fresh = false) {
     setQuizLoading(true)
     setQuizAnswers({})
-    const res = await fetch(`/api/ai/quiz?noteId=${id}`)
+    setAiError('')
+    const res = await fetch(`/api/ai/quiz?noteId=${id}${fresh ? '&fresh=1' : ''}`)
     const data = await res.json()
+    if (!res.ok) { setAiError(data.error || 'AI hatası'); setQuizLoading(false); return }
     setQuiz(data.questions || [])
     setQuizLoading(false)
+  }
+
+  async function submitReport(e: React.FormEvent) {
+    e.preventDefault()
+    if (!reportReason) return
+    setReportError('')
+    const res = await fetch('/api/reports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ noteId: id, reason: reportReason, detail: reportDetail }),
+    })
+    const data = await res.json()
+    if (!res.ok) { setReportError(data.error || 'Şikayet gönderilemedi'); return }
+    setReportDone(true)
   }
 
   async function sendChat() {
@@ -123,7 +148,8 @@ export default function NotePage() {
       body: JSON.stringify({ noteId: id, messages: chatMessages, question: msg }),
     })
     const data = await res.json()
-    setChatMessages([...newMessages, { role: 'assistant', content: data.answer }])
+    const reply = res.ok ? data.answer : (data.error || 'AI hatası oluştu')
+    setChatMessages([...newMessages, { role: 'assistant', content: reply }])
     setChatLoading(false)
   }
 
@@ -198,6 +224,56 @@ export default function NotePage() {
   return (
     <>
       <Navbar />
+
+      {/* Şikayet modal */}
+      {reportOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setReportOpen(false)} />
+          <div className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md p-6">
+            {reportDone ? (
+              <div className="text-center py-4">
+                <p className="text-4xl mb-3">✅</p>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Şikayetin alındı</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">Ekibimiz en kısa sürede inceleyecek. Teşekkürler.</p>
+                <button onClick={() => setReportOpen(false)} className="btn-primary w-full justify-center">Kapat</button>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Notu Şikayet Et</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Bu notta bir sorun mu var? Nedenini seç.</p>
+                {reportError && (
+                  <div className="mb-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-3 py-2 rounded-lg text-sm">{reportError}</div>
+                )}
+                <form onSubmit={submitReport} className="space-y-3">
+                  <div className="space-y-1.5">
+                    {[
+                      { v: 'telif', l: 'Telif hakkı ihlali / korsan içerik' },
+                      { v: 'kalitesiz', l: 'Kalitesiz veya alakasız içerik' },
+                      { v: 'yanlis_kategori', l: 'Yanlış kategori/ders' },
+                      { v: 'spam', l: 'Spam / reklam' },
+                      { v: 'diger', l: 'Diğer' },
+                    ].map(r => (
+                      <label key={r.v} className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer text-sm ${
+                        reportReason === r.v ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300' : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300'}`}>
+                        <input type="radio" name="reason" value={r.v} checked={reportReason === r.v}
+                          onChange={e => setReportReason(e.target.value)} className="accent-blue-600" />
+                        {r.l}
+                      </label>
+                    ))}
+                  </div>
+                  <textarea className="input resize-none text-sm" rows={2} placeholder="Ek açıklama (opsiyonel)"
+                    value={reportDetail} onChange={e => setReportDetail(e.target.value)} />
+                  <div className="flex gap-3 pt-1">
+                    <button type="button" onClick={() => setReportOpen(false)} className="btn-secondary flex-1 justify-center">İptal</button>
+                    <button type="submit" disabled={!reportReason} className="btn-primary flex-1 justify-center">Gönder</button>
+                  </div>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="max-w-5xl mx-auto px-4 py-6">
         <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-5 flex-wrap">
           <Link href="/browse" className="hover:text-gray-700 dark:hover:text-gray-200">Not Bul</Link>
@@ -246,15 +322,29 @@ export default function NotePage() {
                   { label: 'Ders', value: note.course },
                   note.instructor && { label: 'Hoca', value: note.instructor },
                   note.faculty && { label: 'Fakülte', value: note.faculty },
-                  { label: 'Paylaşan', value: note.seller_name },
+                  { label: 'Paylaşan', value: note.seller_name, link: `/profil/${note.seller_id}` },
                   { label: 'İndirme', value: `${note.downloads} kez` },
                 ].filter(Boolean).map((item: any) => (
                   <div key={item.label}>
                     <p className="text-gray-400 dark:text-gray-500 text-xs mb-0.5">{item.label}</p>
-                    <p className="font-medium text-gray-800 dark:text-gray-200 text-sm">{item.value}</p>
+                    {item.link ? (
+                      <Link href={item.link} className="font-medium text-blue-600 dark:text-blue-400 text-sm hover:underline">{item.value}</Link>
+                    ) : (
+                      <p className="font-medium text-gray-800 dark:text-gray-200 text-sm">{item.value}</p>
+                    )}
                   </div>
                 ))}
               </div>
+
+              {/* Şikayet linki */}
+              {session && session.id !== note.seller_id && (
+                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                  <button onClick={() => { setReportOpen(true); setReportDone(false); setReportError('') }}
+                    className="text-xs text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 flex items-center gap-1">
+                    🚩 Bu notu şikayet et
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Tabs */}
@@ -264,6 +354,7 @@ export default function NotePage() {
                   <button key={tab.key}
                     onClick={() => {
                       setActiveTab(tab.key as any)
+                      setAiError('')
                       if (tab.key === 'summary' && !summary) loadSummary()
                       if (tab.key === 'quiz' && quiz.length === 0) loadQuiz()
                     }}
@@ -278,6 +369,11 @@ export default function NotePage() {
               </div>
 
               <div className="p-5 sm:p-6">
+                {aiError && (activeTab === 'summary' || activeTab === 'quiz') && (
+                  <div className="mb-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 px-4 py-3 rounded-lg text-sm">
+                    {aiError}
+                  </div>
+                )}
                 {/* İndir */}
                 {activeTab === 'info' && (
                   <div className="text-center py-8">
@@ -389,7 +485,7 @@ export default function NotePage() {
                     <div className="space-y-5">
                       <div className="flex justify-between items-center">
                         <p className="font-medium text-gray-900 dark:text-white">{quiz.length} Soru</p>
-                        <button onClick={loadQuiz} className="text-sm text-blue-600 hover:underline">Yenile</button>
+                        <button onClick={() => loadQuiz(true)} className="text-sm text-blue-600 hover:underline">Yenile</button>
                       </div>
                       {quiz.map((q, i) => (
                         <div key={i} className="border border-gray-200 dark:border-gray-700 rounded-xl p-4">
@@ -429,7 +525,7 @@ export default function NotePage() {
                       )}
                     </div>
                   ) : (
-                    <button onClick={loadQuiz} className="btn-primary">Quiz Oluştur</button>
+                    <button onClick={() => loadQuiz()} className="btn-primary">Quiz Oluştur</button>
                   )
                 )}
 

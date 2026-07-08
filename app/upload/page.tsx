@@ -32,6 +32,7 @@ export default function UploadPage() {
     title: '', description: '', university: '', faculty: '',
     department: '', course: '', instructor: '', type: 'notes', school_grade: '',
   })
+  const [ownWork, setOwnWork] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -39,12 +40,14 @@ export default function UploadPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!file) { setError('Lütfen bir PDF dosyası seç'); return }
+    if (!ownWork) { setError('İçeriğin sana ait olduğunu onaylamalısın'); return }
     setError('')
     setLoading(true)
 
     const fd = new FormData()
     fd.append('file', file)
     fd.append('school_type', schoolType)
+    fd.append('own_work', ownWork ? 'true' : 'false')
     Object.entries(form).forEach(([k, v]) => fd.append(k, v))
 
     try {
@@ -230,7 +233,17 @@ export default function UploadPage() {
               </div>
             </div>
 
-            <button type="submit" className="btn-primary w-full justify-center text-base py-3" disabled={loading}>
+            {/* Telif onayı */}
+            <label className="flex items-start gap-3 p-4 rounded-xl border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50">
+              <input type="checkbox" checked={ownWork} onChange={e => setOwnWork(e.target.checked)}
+                className="mt-0.5 w-4 h-4 accent-blue-600" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                Bu içeriğin <strong>tamamen bana ait</strong> olduğunu, ders kitabı/korsan kaynak
+                içermediğini onaylıyorum. Aksi halde notun kaldırılabilir.
+              </span>
+            </label>
+
+            <button type="submit" className="btn-primary w-full justify-center text-base py-3" disabled={loading || !ownWork}>
               {loading ? 'Yükleniyor...' : '📤 Notu Paylaş'}
             </button>
           </form>
