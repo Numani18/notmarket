@@ -3,8 +3,8 @@ import { getSession } from '@/lib/auth'
 import { getDb } from '@/lib/db'
 import { generateQuiz } from '@/lib/claude'
 import { checkAndConsume } from '@/lib/ai-limit'
-import { extractPdfText } from '@/lib/pdf'
-import path from 'path'
+import { extractPdfTextFromBuffer } from '@/lib/pdf'
+import { downloadPdf, objectNameFromUrl } from '@/lib/storage'
 
 export async function GET(req: NextRequest) {
   const session = getSession()
@@ -33,11 +33,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: `Günlük AI quiz limitine ulaştın (${limit.limit}). Yarın tekrar dene.` }, { status: 429 })
   }
 
-  const filePath = path.join(process.cwd(), 'public', note.file_path)
-
   let text: string
   try {
-    text = await extractPdfText(filePath, 8000)
+    const buffer = await downloadPdf(objectNameFromUrl(note.file_path))
+    text = await extractPdfTextFromBuffer(buffer, 8000)
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 422 })
   }

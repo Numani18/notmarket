@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDb } from '@/lib/db'
 import { getSession } from '@/lib/auth'
+import { deletePdf, objectNameFromUrl } from '@/lib/storage'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const db = await getDb()
@@ -55,10 +56,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   await db.prepare('DELETE FROM notes WHERE id = ?').run(params.id)
 
   try {
-    const fs = await import('fs')
-    const path = await import('path')
-    const filePath = path.join(process.cwd(), 'public', note.file_path)
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
+    await deletePdf(objectNameFromUrl(note.file_path))
   } catch {}
 
   return NextResponse.json({ success: true })

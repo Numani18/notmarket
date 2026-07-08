@@ -48,10 +48,8 @@ export async function PATCH(req: NextRequest) {
     await db.prepare('DELETE FROM reviews WHERE note_id = ?').run(noteId)
     await db.prepare('DELETE FROM notes WHERE id = ?').run(noteId)
     try {
-      const fs = await import('fs')
-      const path = await import('path')
-      const fp = path.join(process.cwd(), 'public', note.file_path)
-      if (fs.existsSync(fp)) fs.unlinkSync(fp)
+      const { deletePdf, objectNameFromUrl } = await import('@/lib/storage')
+      await deletePdf(objectNameFromUrl(note.file_path))
     } catch {}
   } else {
     return NextResponse.json({ error: 'Geçersiz action' }, { status: 400 })

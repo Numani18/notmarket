@@ -16,6 +16,7 @@
     "@anthropic-ai/sdk": "^0.32.1",
     "@google/generative-ai": "^0.24.1",
     "@libsql/client": "^0.17.4",
+    "@supabase/supabase-js": "^2.110.1",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
     "next": "14.2.3",

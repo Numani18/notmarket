@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getDb } from '@/lib/db'
 import { getSession } from '@/lib/auth'
 import { createNotification } from '@/lib/notify'
-import fs from 'fs'
-import path from 'path'
+import { downloadPdf, objectNameFromUrl } from '@/lib/storage'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const session = getSession()
@@ -13,8 +12,12 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const note = await db.prepare('SELECT * FROM notes WHERE id = ?').get(params.id) as any
   if (!note) return NextResponse.json({ error: 'Not bulunamadı' }, { status: 404 })
 
-  const filePath = path.join(process.cwd(), 'public', note.file_path)
-  if (!fs.existsSync(filePath)) return NextResponse.json({ error: 'Dosya bulunamadı' }, { status: 404 })
+  let fileBuffer: Buffer
+  try {
+    fileBuffer = await downloadPdf(objectNameFromUrl(note.file_path))
+  } catch {
+    return NextResponse.json({ error: 'Dosya bulunamadı' }, { status: 404 })
+  }
 
   await db.prepare('UPDATE notes SET downloads = downloads + 1 WHERE id = ?').run(params.id)
 
@@ -31,8 +34,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     }
   }
 
-  const fileBuffer = fs.readFileSync(filePath)
-  return new NextResponse(fileBuffer, {
+  return new NextResponse(fileBuffer as any, {
     headers: {
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename="${encodeURIComponent(note.title)}.pdf"`,

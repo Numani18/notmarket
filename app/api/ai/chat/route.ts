@@ -3,8 +3,8 @@ import { getSession } from '@/lib/auth'
 import { getDb } from '@/lib/db'
 import { chatWithNote } from '@/lib/claude'
 import { checkAndConsume } from '@/lib/ai-limit'
-import { extractPdfText } from '@/lib/pdf'
-import path from 'path'
+import { extractPdfTextFromBuffer } from '@/lib/pdf'
+import { downloadPdf, objectNameFromUrl } from '@/lib/storage'
 
 export async function POST(req: NextRequest) {
   const session = getSession()
@@ -22,11 +22,10 @@ export async function POST(req: NextRequest) {
   const note = await db.prepare('SELECT * FROM notes WHERE id = ?').get(noteId) as any
   if (!note) return NextResponse.json({ error: 'Not bulunamadı' }, { status: 404 })
 
-  const filePath = path.join(process.cwd(), 'public', note.file_path)
-
   let noteText: string
   try {
-    noteText = await extractPdfText(filePath, 8000)
+    const buffer = await downloadPdf(objectNameFromUrl(note.file_path))
+    noteText = await extractPdfTextFromBuffer(buffer, 8000)
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 422 })
   }

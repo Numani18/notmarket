@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { getDb } from '@/lib/db'
+import { uploadPdf, deletePdf } from '@/lib/storage'
 import { v4 as uuid } from 'uuid'
-import path from 'path'
-import fs from 'fs'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -56,16 +55,14 @@ export async function POST(req: NextRequest) {
 
   const price = 0
 
-  const uploadDir = path.join(process.cwd(), 'public', 'uploads')
-  if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true })
-
   const noteId = uuid()
-  const fileName = `${noteId}.pdf`
-  const destPath = path.join(uploadDir, fileName)
+  const objectName = `${noteId}.pdf`
 
+  // Supabase Storage'a yükle
+  let publicUrl: string
   try {
     const arrayBuffer = await file.arrayBuffer()
-    fs.writeFileSync(destPath, Buffer.from(arrayBuffer))
+    publicUrl = await uploadPdf(objectName, Buffer.from(arrayBuffer))
   } catch (err: any) {
     return NextResponse.json({ error: 'Dosya kaydedilemedi: ' + err.message }, { status: 500 })
   }
@@ -87,12 +84,12 @@ export async function POST(req: NextRequest) {
       get('instructor'),
       get('type') || 'notes',
       price,
-      `/uploads/${fileName}`,
+      publicUrl,
       school_type,
       school_grade
     )
   } catch (err: any) {
-    fs.unlinkSync(destPath)
+    await deletePdf(objectName)
     return NextResponse.json({ error: 'Veritabanı hatası: ' + err.message }, { status: 500 })
   }
 
