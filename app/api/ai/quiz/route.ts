@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { getDb } from '@/lib/db'
 import { generateQuiz } from '@/lib/claude'
-import { checkAndConsume } from '@/lib/ai-limit'
+import { spendPoints, POINTS } from '@/lib/points'
 import { extractPdfTextFromBuffer } from '@/lib/pdf'
 import { downloadPdf, objectNameFromUrl } from '@/lib/storage'
 
@@ -27,10 +27,10 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Yeni üretim — günlük limiti kontrol et
-  const limit = await checkAndConsume(session.id, 'quiz')
-  if (!limit.ok) {
-    return NextResponse.json({ error: `Günlük AI quiz limitine ulaştın (${limit.limit}). Yarın tekrar dene.` }, { status: 429 })
+  // Yeni üretim — puan harca
+  const spent = await spendPoints(session.id, POINTS.COST_QUIZ)
+  if (!spent.ok) {
+    return NextResponse.json({ error: `Yeterli puanın yok (${POINTS.COST_QUIZ} puan gerekli, ${spent.balance} puanın var). Not yükleyerek puan kazan!` }, { status: 402 })
   }
 
   let text: string

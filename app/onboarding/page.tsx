@@ -11,10 +11,11 @@ const UNIVERSITIES = [
   'Marmara Üniversitesi', 'Yıldız Teknik Üniversitesi', 'Gazi Üniversitesi', 'Diğer',
 ]
 const GRADES = ['9. Sınıf', '10. Sınıf', '11. Sınıf', '12. Sınıf']
+const ORTAOKUL_GRADES = ['5. Sınıf', '6. Sınıf', '7. Sınıf', '8. Sınıf']
 
 export default function OnboardingPage() {
   const router = useRouter()
-  const [schoolType, setSchoolType] = useState<'universite' | 'lise'>('universite')
+  const [schoolType, setSchoolType] = useState<'universite' | 'lise' | 'ortaokul'>('universite')
   const [university, setUniversity] = useState('')
   const [department, setDepartment] = useState('')
   const [saving, setSaving] = useState(false)
@@ -53,7 +54,7 @@ export default function OnboardingPage() {
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Eğitim Kademesi</label>
             <div className="flex gap-3">
-              {[{ v: 'universite', l: '🎓 Üniversite' }, { v: 'lise', l: '🏫 Lise' }].map(o => (
+              {[{ v: 'universite', l: '🎓 Üniversite' }, { v: 'lise', l: '🏫 Lise' }, { v: 'ortaokul', l: '🎒 Ortaokul' }].map(o => (
                 <button key={o.v} type="button" onClick={() => { setSchoolType(o.v as any); setDepartment('') }}
                   className={`flex-1 py-3 rounded-xl border-2 font-medium text-sm transition-colors ${
                     schoolType === o.v ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300'
@@ -90,7 +91,7 @@ export default function OnboardingPage() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Sınıf</label>
                 <select className="input" value={department} onChange={e => setDepartment(e.target.value)}>
                   <option value="">Seç...</option>
-                  {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+                  {(schoolType === 'ortaokul' ? ORTAOKUL_GRADES : GRADES).map(g => <option key={g} value={g}>{g}</option>)}
                 </select>
               </div>
             </>

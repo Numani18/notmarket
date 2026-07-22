@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { getDb } from '@/lib/db'
 import { chatWithNote } from '@/lib/claude'
-import { checkAndConsume } from '@/lib/ai-limit'
+import { spendPoints, POINTS } from '@/lib/points'
 import { extractPdfTextFromBuffer } from '@/lib/pdf'
 import { downloadPdf, objectNameFromUrl } from '@/lib/storage'
 
@@ -13,9 +13,9 @@ export async function POST(req: NextRequest) {
   const { noteId, messages, question } = await req.json()
   if (!noteId || !question) return NextResponse.json({ error: 'noteId ve question gerekli' }, { status: 400 })
 
-  const limit = await checkAndConsume(session.id, 'chat')
-  if (!limit.ok) {
-    return NextResponse.json({ error: `Günlük AI asistan limitine ulaştın (${limit.limit}). Yarın tekrar dene.` }, { status: 429 })
+  const spent = await spendPoints(session.id, POINTS.COST_CHAT)
+  if (!spent.ok) {
+    return NextResponse.json({ error: `Yeterli puanın yok (${POINTS.COST_CHAT} puan gerekli, ${spent.balance} puanın var). Not yükleyerek puan kazan!` }, { status: 402 })
   }
 
   const db = await getDb()

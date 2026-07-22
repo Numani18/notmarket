@@ -11,6 +11,7 @@ interface User {
   name: string
   email: string
   role?: string
+  points?: number
 }
 
 export default function Navbar() {
@@ -66,6 +67,12 @@ export default function Navbar() {
           </div>
 
           <div className="flex items-center gap-3">
+            {user && (
+              <span title="Puanın — not yükleyerek kazan, AI'da harca"
+                className="hidden sm:inline-flex items-center gap-1 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 text-sm font-medium px-2.5 py-1 rounded-full">
+                ⭐ {user.points ?? 0}
+              </span>
+            )}
             {user && <NotificationBell />}
             <ThemeToggle />
             {user ? (

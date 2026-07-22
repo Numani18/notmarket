@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { getDb } from '@/lib/db'
 import { summarizeNote } from '@/lib/claude'
-import { checkAndConsume } from '@/lib/ai-limit'
+import { spendPoints, POINTS } from '@/lib/points'
 import { extractPdfTextFromBuffer } from '@/lib/pdf'
 import { downloadPdf, objectNameFromUrl } from '@/lib/storage'
 
@@ -23,10 +23,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ summary: cached.summary, keyTopics: JSON.parse(cached.key_topics) })
   }
 
-  // Cache yoksa yeni üretim — günlük limiti kontrol et
-  const limit = await checkAndConsume(session.id, 'summary')
-  if (!limit.ok) {
-    return NextResponse.json({ error: `Günlük AI özet limitine ulaştın (${limit.limit}). Yarın tekrar dene.` }, { status: 429 })
+  // Cache yoksa yeni üretim — puan harca
+  const spent = await spendPoints(session.id, POINTS.COST_SUMMARY)
+  if (!spent.ok) {
+    return NextResponse.json({ error: `Yeterli puanın yok (${POINTS.COST_SUMMARY} puan gerekli, ${spent.balance} puanın var). Not yükleyerek puan kazan!` }, { status: 402 })
   }
 
   let text: string

@@ -8,7 +8,7 @@ export async function GET() {
 
   const db = await getDb()
   const user = await db
-    .prepare('SELECT id, name, email, university, department, balance, role FROM users WHERE id = ?')
+    .prepare('SELECT id, name, email, university, department, balance, role, points FROM users WHERE id = ?')
     .get(session.id) as any
 
   return NextResponse.json({ user: user || null })

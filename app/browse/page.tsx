@@ -26,7 +26,7 @@ function FilterPanel({
       <div>
         <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Kademe</label>
         <div className="flex flex-col gap-1">
-          {[{ value: '', label: 'Tümü' }, { value: 'universite', label: '🎓 Üniversite' }, { value: 'lise', label: '🏫 Lise' }].map(opt => (
+          {[{ value: '', label: 'Tümü' }, { value: 'universite', label: '🎓 Üniversite' }, { value: 'lise', label: '🏫 Lise' }, { value: 'ortaokul', label: '🎒 Ortaokul' }].map(opt => (
             <button key={opt.value} onClick={() => setFilters({ ...filters, school_type: opt.value })}
               className={`w-full text-left px-3 py-1.5 text-sm rounded-lg transition-colors ${
                 filters.school_type === opt.value
@@ -38,16 +38,16 @@ function FilterPanel({
       </div>
       <div>
         <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-          {filters.school_type === 'lise' ? 'Okul' : 'Üniversite'}
+          {filters.school_type === 'universite' || filters.school_type === '' ? 'Üniversite' : 'Okul'}
         </label>
-        <input className="input text-sm" placeholder={filters.school_type === 'lise' ? 'Galatasaray Lisesi...' : 'İTÜ, ODTÜ...'} value={filters.university}
+        <input className="input text-sm" placeholder={filters.school_type === 'universite' || filters.school_type === '' ? 'İTÜ, ODTÜ...' : 'Galatasaray Lisesi...'} value={filters.university}
           onChange={(e) => setFilters({ ...filters, university: e.target.value })} />
       </div>
       <div>
         <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-          {filters.school_type === 'lise' ? 'Sınıf' : 'Bölüm'}
+          {filters.school_type === 'universite' || filters.school_type === '' ? 'Bölüm' : 'Sınıf'}
         </label>
-        <input className="input text-sm" placeholder={filters.school_type === 'lise' ? '11. Sınıf...' : 'Bilgisayar Müh...'} value={filters.department}
+        <input className="input text-sm" placeholder={filters.school_type === 'universite' || filters.school_type === '' ? 'Bilgisayar Müh...' : '7. Sınıf...'} value={filters.department}
           onChange={(e) => setFilters({ ...filters, department: e.target.value })} />
       </div>
       <div>

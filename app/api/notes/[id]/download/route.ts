@@ -3,6 +3,7 @@ import { getDb } from '@/lib/db'
 import { getSession } from '@/lib/auth'
 import { createNotification } from '@/lib/notify'
 import { downloadPdf, objectNameFromUrl } from '@/lib/storage'
+import { addPoints, POINTS } from '@/lib/points'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const session = getSession()
@@ -21,8 +22,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   await db.prepare('UPDATE notes SET downloads = downloads + 1 WHERE id = ?').run(params.id)
 
-  // Her 5 indirmede bir not sahibine bildirim (spam olmasın diye)
+  // Başkası indirince not sahibine puan ödülü
   if (note.seller_id !== session.id) {
+    await addPoints(note.seller_id, POINTS.DOWNLOAD)
     const newCount = (note.downloads || 0) + 1
     if (newCount === 1 || newCount % 5 === 0) {
       await createNotification(

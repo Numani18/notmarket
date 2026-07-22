@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { getDb } from '@/lib/db'
 import { uploadPdf, deletePdf } from '@/lib/storage'
+import { addPoints, POINTS } from '@/lib/points'
 import { v4 as uuid } from 'uuid'
 
 export const runtime = 'nodejs'
@@ -93,5 +94,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Veritabanı hatası: ' + err.message }, { status: 500 })
   }
 
-  return NextResponse.json({ success: true, noteId })
+  // Not yükleme ödülü
+  await addPoints(session.id, POINTS.UPLOAD)
+
+  return NextResponse.json({ success: true, noteId, earnedPoints: POINTS.UPLOAD })
 }

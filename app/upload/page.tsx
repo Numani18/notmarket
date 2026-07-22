@@ -12,6 +12,7 @@ const UNIVERSITIES = [
 ]
 
 const HIGH_SCHOOL_GRADES = ['9. Sınıf', '10. Sınıf', '11. Sınıf', '12. Sınıf']
+const MIDDLE_SCHOOL_GRADES = ['5. Sınıf', '6. Sınıf', '7. Sınıf', '8. Sınıf']
 
 const NOTE_TYPES = [
   { value: 'notes', label: 'Ders Notu' },
@@ -27,7 +28,7 @@ export default function UploadPage() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
   const [dragging, setDragging] = useState(false)
-  const [schoolType, setSchoolType] = useState<'universite' | 'lise'>('universite')
+  const [schoolType, setSchoolType] = useState<'universite' | 'lise' | 'ortaokul'>('universite')
   const [form, setForm] = useState({
     title: '', description: '', university: '', faculty: '',
     department: '', course: '', instructor: '', type: 'notes', school_grade: '',
@@ -92,10 +93,11 @@ export default function UploadPage() {
             {/* Okul tipi seçimi */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Eğitim Kademesi</label>
-              <div className="flex gap-3">
+              <div className="flex gap-2">
                 {[
                   { value: 'universite', label: '🎓 Üniversite' },
                   { value: 'lise', label: '🏫 Lise' },
+                  { value: 'ortaokul', label: '🎒 Ortaokul' },
                 ].map(opt => (
                   <button
                     key={opt.value}
@@ -209,7 +211,7 @@ export default function UploadPage() {
                     <select className="input" value={form.school_grade}
                       onChange={e => setForm({ ...form, school_grade: e.target.value, department: e.target.value })} required>
                       <option value="">Seç...</option>
-                      {HIGH_SCHOOL_GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+                      {(schoolType === 'ortaokul' ? MIDDLE_SCHOOL_GRADES : HIGH_SCHOOL_GRADES).map(g => <option key={g} value={g}>{g}</option>)}
                     </select>
                   </div>
                   <div>

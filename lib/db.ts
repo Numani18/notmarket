@@ -89,6 +89,7 @@ async function initSchema(db: Client) {
       department  TEXT,
       balance     REAL NOT NULL DEFAULT 0,
       role        TEXT NOT NULL DEFAULT 'user',
+      points      INTEGER NOT NULL DEFAULT 50,
       created_at  TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -188,6 +189,9 @@ async function initSchema(db: Client) {
     CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
     CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);
   `))
+
+  // Mevcut veritabanları için migration
+  try { await db.execute("ALTER TABLE users ADD COLUMN points INTEGER NOT NULL DEFAULT 50") } catch {}
 
   // Admin bootstrap
   const adminEmail = process.env.ADMIN_EMAIL

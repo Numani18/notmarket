@@ -51,7 +51,7 @@ export default function NoteCard({ note }: { note: Note }) {
 
         <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
           <div className="flex items-center gap-1.5">
-            <span className="text-xs">{note.school_type === 'lise' ? '🏫' : '🎓'}</span>
+            <span className="text-xs">{note.school_type === 'lise' ? '🏫' : note.school_type === 'ortaokul' ? '🎒' : '🎓'}</span>
             <p className="font-medium text-gray-700 dark:text-gray-300 truncate">{note.university}</p>
           </div>
           <p className="truncate">{note.department} · {note.course}</p>
