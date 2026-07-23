@@ -1,7 +1,7 @@
 {
   "name": "NotMarket — Öğrenci Not Topluluğu",
   "short_name": "NotMarket",
-  "description": "Üniversite ve lise ders notlarını paylaş, indir ve AI ile çalış. Tamamen ücretsiz.",
+  "description": "Ders notunu yükle, yapay zeka özetlesin, quiz çıkarsın ve sana ders anlatsın. Tamamen ücretsiz.",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",

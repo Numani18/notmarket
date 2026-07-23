@@ -7,8 +7,8 @@ import ServiceWorker from '@/components/ServiceWorker'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'NotMarket — Öğrenci Not Topluluğu',
-  description: 'Üniversite ve lise ders notlarını paylaş, indir ve AI ile çalış. Tamamen ücretsiz.',
+  title: 'NotMarket — Yapay Zeka Destekli Çalışma Asistanı',
+  description: 'Ders notunu yükle, yapay zeka saniyede özetlesin, quiz çıkarsın ve anlamadığın yeri açıklasın. Binlerce hazır not — tamamen ücretsiz.',
   manifest: '/manifest.webmanifest',
   applicationName: 'NotMarket',
   appleWebApp: {

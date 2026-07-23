@@ -38,45 +38,56 @@ export default async function Home() {
     <>
       <Navbar />
       <main>
-        {/* Hero */}
+        {/* Hero — AI odaklı */}
         <section className="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-20 px-4">
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 bg-blue-500/30 rounded-full px-4 py-1.5 text-sm mb-6">
               <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-              Türkiye&apos;nin öğrenci not topluluğu
+              Yapay zeka destekli çalışma asistanı
             </div>
             <h1 className="text-4xl sm:text-5xl font-bold mb-6 leading-tight">
-              Ders notlarını paylaş,<br />
-              başkalarının notlarından öğren
+              Notunu yükle,<br />
+              yapay zeka seni sınava hazırlasın
             </h1>
             <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-              WhatsApp gruplarında kaybolmadan, Telegram kanallarında aramadan.
-              Üniversite ve lise notları tek yerde — tamamen ücretsiz.
+              Ders notunu saniyeler içinde özetler, sana özel quiz çıkarır ve
+              anlamadığın yeri açıklar. Binlerce hazır not da cabası — tamamen ücretsiz.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link href="/browse" className="inline-flex items-center justify-center px-8 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors text-lg">
-                Not Bul
+              <Link href="/auth/register" className="inline-flex items-center justify-center px-8 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors text-lg">
+                Ücretsiz Başla
               </Link>
-              <Link href="/auth/register" className="inline-flex items-center justify-center px-8 py-3 bg-transparent border-2 border-white text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors text-lg">
-                Not Paylaş
+              <Link href="/browse" className="inline-flex items-center justify-center px-8 py-3 bg-transparent border-2 border-white text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors text-lg">
+                Notları Keşfet
               </Link>
             </div>
           </div>
         </section>
 
-        {/* Free banner */}
-        <section className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 py-12">
-          <div className="max-w-3xl mx-auto px-4 text-center">
-            <span className="inline-flex items-center gap-1.5 bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-300 px-4 py-1.5 rounded-full font-semibold text-sm mb-4">
-              ✓ Gizli ücret yok
-            </span>
+        {/* AI değer önermesi */}
+        <section className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 py-14 px-4">
+          <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-snug">
-              Tüm notlar, AI özet, quiz ve asistan{' '}
-              <span className="text-blue-600 dark:text-blue-400">%100 ücretsiz</span>
+              PDF okumak eski usul.<br />
+              <span className="text-blue-600 dark:text-blue-400">Yapay zeka ile çalış.</span>
             </h2>
-            <p className="text-gray-500 dark:text-gray-400 mt-3 text-lg">
-              Kredi kartı yok, abonelik yok, gizli ücret yok. Sadece kaydol ve kullan.
+            <p className="text-gray-500 dark:text-gray-400 mt-3 text-lg max-w-2xl mx-auto">
+              WhatsApp&apos;tan indirdiğin PDF sadece bir dosya. NotMarket&apos;te her not;
+              özetlenebilir, quize dönüşebilir ve sana ders anlatabilir.
             </p>
+            <div className="grid sm:grid-cols-3 gap-4 mt-10 text-left">
+              {[
+                { icon: '🧠', t: 'Otomatik özet', d: '100 sayfayı saniyede özetler' },
+                { icon: '❓', t: 'Kişisel quiz', d: 'Notundan sınava hazırlar' },
+                { icon: '💬', t: 'AI asistan', d: '"Anlamadım" de, açıklasın' },
+              ].map(f => (
+                <div key={f.t} className="card p-5">
+                  <div className="text-3xl mb-2">{f.icon}</div>
+                  <p className="font-bold text-gray-900 dark:text-white">{f.t}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{f.d}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
