@@ -54,8 +54,8 @@ export default async function Home() {
               anlamadığın yeri açıklar. Binlerce hazır not da cabası — tamamen ücretsiz.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link href="/auth/register" className="inline-flex items-center justify-center px-8 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors text-lg">
-                Ücretsiz Başla
+              <Link href="/calis" className="inline-flex items-center justify-center px-8 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors text-lg">
+                ✨ PDF&apos;ini AI ile Çalış
               </Link>
               <Link href="/browse" className="inline-flex items-center justify-center px-8 py-3 bg-transparent border-2 border-white text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors text-lg">
                 Notları Keşfet

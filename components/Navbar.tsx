@@ -46,6 +46,9 @@ export default function Navbar() {
           </Link>
 
           <div className="hidden md:flex items-center gap-6">
+            <Link href="/calis" className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
+              ✨ AI ile Çalış
+            </Link>
             <Link href="/browse" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium">
               Not Bul
             </Link>
